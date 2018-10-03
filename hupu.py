@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 
 """Hupu Live:
     Proudly presented by Hupu JRs.
@@ -15,7 +18,7 @@ Tips:
     Please hit Ctrl-C on the keyborad when you want to interrupt the game live.
 
 Arguments:
-    gameNumber     The key number contact to the specific game.
+    gameNumber     Obtained by command 'hupu -l'
 
 Options:
     -h --help        Show this help message and exit.
@@ -25,13 +28,21 @@ Options:
     -d --data        Show game statistical data (like points, rebounds, assists)
     -n --news        Show postgame news
     -s --schedule    Show game schedule
+
+modify by yang zhi long 
+time: 2018.10.3
 """
+
+from __future__ import print_function
 import time
 import re
 
 from docopt import docopt
 import requests
 from bs4 import BeautifulSoup
+import sys
+reload(sys)
+sys.setdefaultencoding( "utf-8" )
 
 class Hupu():
 
@@ -51,22 +62,31 @@ class Hupu():
         """ 处理命令行参数 """
         if self._args.get('-l') or self._args.get('--list'):
             if self._namelst:
-                print("\n 比赛\t\t| 比赛场次\n", "-" * 25)
+                print("\n 比赛\t\t\t| 比赛场次\n", "-" * 35)
                 for i, v in enumerate(self._namelst):
-                    print(" {}\t| {}\n".format(v, i), "-" * 25)
+                    print(" {}\t| {}\n".format(v, i), "-" * 35)
             else:
                 print(">>  暂无比赛直播")
         if self._args.get('-w') or self._args.get('--watch'):
+            if self._args.get('<gameNumber>') == None:
+                print(">>  请输入观看的场次序号(可通过'hupu -l'获取)")
+                raise SystemExit
             try:
                 self.live_game(self._hreflst[int(self._args.get('<gameNumber>'))])
             except Exception:
                 print(">>  无该比赛场次文字直播")
         if self._args.get('-d') or self._args.get('--data'):
+            if self._args.get('<gameNumber>') == None:
+                print(">>  请输入观看的场次序号以获取球员数据(可通过'hupu -l'获取)")
+                raise SystemExit
             try:
                 self.show_data(self._datalst[int(self._args.get('<gameNumber>'))])
             except Exception:
                 print(">>  无该比赛场次球员数据")
         if self._args.get('-n') or self._args.get('--news'):
+            if self._args.get('<gameNumber>') == None:
+                print(">>  请输入观看的场次序号以获取赛后新闻(可通过'hupu -l'获取)")
+                raise SystemExit
             try:
                 self.show_news(int(self._args.get('<gameNumber>')))
             except Exception:
@@ -79,7 +99,7 @@ class Hupu():
 
     def get_gamelist(self):
         """ 获取直播场次列表 """
-        url = "https://nba.hupu.com/games/playbyplay"
+        url = "https://nba.hupu.com/games"
         try:
             r = requests.get(url, headers=self._headers, timeout=6).text
             game_href = BeautifulSoup(r, 'lxml').find_all('a', target="_self")
@@ -88,7 +108,8 @@ class Hupu():
                 if "playbyplay" in h:
                     self._hreflst.append(h)
                     game = BeautifulSoup(requests.get(h).text, 'lxml').find('p', class_="bread-crumbs").text
-                    self._namelst.append(str(game).strip().split()[2][:-4])     # 获取对阵双方
+                    self._namelst.append(str(game).strip().split()[1])     
+                    """ 获取对阵双方"""
                 if "boxscore" in h:
                     self._datalst.append(h)
         except requests.exceptions.ConnectTimeout:
@@ -129,6 +150,7 @@ class Hupu():
     def show_news(self, index):
         """ 显示赛后新闻 """
         r = requests.get(self._hreflst[index], headers=self._headers, timeout=6).text
+        print(self._hreflst[index])
         news_href = BeautifulSoup(r, 'lxml').find_all('a', target="_self")
         for href in news_href:
             h = href['href']
@@ -200,8 +222,8 @@ class Hupu():
             trlst = table.find('table').find_all('tr')
             self.live_order(trlst, currid_cnt, table)
             return
-        try:
-            while True:
+        while True:
+            try:
                 r = requests.get(url, headers=self._headers, timeout=6).text
                 table = BeautifulSoup(r, 'lxml').find('div', class_="table_list_live playbyplay_td table_overflow")
                 tr = list(table.find('table').find_all('tr'))
@@ -217,11 +239,11 @@ class Hupu():
                         print("", td[0], "\n")
                         if td[0] == "比赛结束":
                             return
-                time.sleep(1)                       # 每隔一秒发起一次请求
-        except requests.exceptions.ConnectTimeout:
-            print(">>  网络连接失败，无法获得直播数据")
-        except KeyboardInterrupt:
-            print(">>  您已中断直播")
+                time.sleep(10)                       # 刷新频率
+            except requests.exceptions.ConnectTimeout:
+                print(">>  网络连接失败，无法获得直播数据")
+            except KeyboardInterrupt:
+                print(">>  您已中断直播")
 
 
 def cli():
