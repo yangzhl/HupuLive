@@ -142,7 +142,7 @@ class Hupu():
                     if i == 1:
                         print(" ", v.replace("\n", ""), end="\t")
                     elif i == 13:
-                        print(v.replace("\n", ""), end="\t\t")
+                        print(v.replace("\n", ""), end="\t")
                     else:
                         print(v.replace("\n", ""), end="\t")
             print(tdlst[0], "\n")
